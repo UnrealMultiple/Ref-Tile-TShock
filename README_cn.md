@@ -78,6 +78,28 @@ dotnet publish -r win-x64 -f net9.0 -c Release -p:PublishSingleFile=true --self-
 - 判空用 `tile.IsNull` / `tile.IsNotNull`（结构体不可能为 null）
 - 需要跨作用域保存方块引用（字段、集合、闭包、async）时，用 `RefTileData` 包装
 
+## 插件迁移工具（RefTile.PluginMigrator）
+
+官方 TShock/TSAPI 插件是基于**类**的方块模型（`Terraria.ITile` / `Terraria.Tile`）编译的，无法直接在本项目的 Ref Tile 模型（`Terraria.TileData` 结构体）下运行。仓库自带的 **`RefTile.PluginMigrator`** 是一个 IL 重写工具，可自动把这类插件转换成本项目兼容的插件：
+
+- **原理**：使用 Mono.Cecil / MonoMod 对插件程序集做 IL 级重写，把 `ITile` / `Tile` 类型、字段、属性访问、方法调用、`newobj`、判空以及 `Main.tile` 访问全部改写为 `TileData` / `TileCollection`（与游戏本体 patch 使用同一套转换逻辑）。
+- **构建**：`dotnet build TShockPluginMigrator -c Release` 单独编译，产物在 `TShockPluginMigrator/bin/Release/net9.0/`，可手动复制到服务器目录使用。
+
+使用方法（在服务器目录下运行）：
+
+```bash
+# 迁移 ServerPlugins 目录下所有插件（就地改写，原文件保留 .bak 备份）
+RefTile.PluginMigrator
+
+# 指定文件 / 输出目录 / 参考程序集目录
+RefTile.PluginMigrator MyPlugin.dll -o migrated -ref C:\path\to\OTAPI.dll
+
+# 自检（编译一个模拟旧插件并验证改写结果）
+RefTile.PluginMigrator --selftest
+```
+
+> 建议迁移前备份插件；迁移后可先 `--selftest` 验证工具本身正常。详细说明见 [docs/plugin-migrator.md](docs/plugin-migrator.md)。
+
 ## 许可证
 
 [GPL-3.0-or-later](https://www.gnu.org/licenses/gpl-3.0.html)（与上游 TShock 一致）。

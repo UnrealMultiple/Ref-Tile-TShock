@@ -78,6 +78,28 @@ Note that this project runs the **Ref Struct Tile** mode, so:
 - Null checks become `tile.IsNull` / `tile.IsNotNull` (structs can't be null)
 - To keep a tile reference beyond the current scope (fields, collections, closures, async), wrap it in `RefTileData`
 
+## Plugin migrator (RefTile.PluginMigrator)
+
+Official TShock/TSAPI plugins are compiled against the **class-based** tile model (`Terraria.ITile` / `Terraria.Tile`) and cannot run directly under this project's Ref Tile model (`Terraria.TileData` struct). The bundled **`RefTile.PluginMigrator`** is an IL rewriting tool that converts such plugins to be compatible with this project:
+
+- **How it works**: it uses Mono.Cecil / MonoMod to rewrite the plugin assembly at the IL level — types, fields, property accessors, method calls, `newobj`, null handling and `Main.tile` access are all converted to `TileData` / `TileCollection` (the same conversion machinery used by the game patch itself).
+- **Build**: compile it separately with `dotnet build TShockPluginMigrator -c Release`; the output lands in `TShockPluginMigrator/bin/Release/net9.0/`, which you can copy next to your server manually.
+
+Usage (run inside the server directory):
+
+```bash
+# Migrate every plugin in the ServerPlugins folder (in place, a .bak is kept)
+RefTile.PluginMigrator
+
+# Specific files / output dir / reference assembly dir
+RefTile.PluginMigrator MyPlugin.dll -o migrated -ref C:\path\to\OTAPI.dll
+
+# Self-test (compiles a stub old-model plugin and verifies the rewrite)
+RefTile.PluginMigrator --selftest
+```
+
+> Back up your plugins before migrating; you can run `--selftest` to verify the tool itself. See [docs/plugin-migrator.md](docs/plugin-migrator.md) for details.
+
 ## License
 
 [GPL-3.0-or-later](https://www.gnu.org/licenses/gpl-3.0.html) (same as upstream TShock).
