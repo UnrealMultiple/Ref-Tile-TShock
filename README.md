@@ -1,53 +1,83 @@
 <p align="center">
-  <img src="https://tshock.s3.us-west-001.backblazeb2.com/newlogo.png" alt="TShock for Terraria"><br />
-  <a href="https://ci.appveyor.com/project/hakusaro/tshock">
-    <img src="https://ci.appveyor.com/api/projects/status/chhe61q227lqdlg1?svg=true" alt="AppVeyor Build Status">
+  <img src="https://tshock.s3.us-west-001.backblazeb2.com/newlogo.png" alt="Ref-Tile-TShock"><br />
+  <a href="https://github.com/UnrealMultiple/Ref-Tile-TShock/actions/workflows/ci-otapi3.yml">
+    <img src="https://github.com/UnrealMultiple/Ref-Tile-TShock/actions/workflows/ci-otapi3.yml/badge.svg" alt="GitHub Actions Build Status">
   </a>
-  <a href="https://github.com/Pryaxis/TShock/actions">
-    <img src="https://github.com/Pryaxis/TShock/actions/workflows/build.yml/badge.svg" alt="GitHub Actions Build Status">
-  </a>
-  <a title="Crowdin" target="_blank" href="https://crowdin.com/project/tshock"><img src="https://badges.crowdin.net/tshock/localized.svg"></a>
-  <br/><br/>
-  <a href="https://github.com/Pryaxis/TShock/blob/general-devel/README_cn.md">查看中文版</a>
+  <a href="https://github.com/UnrealMultiple/Ref-Tile-TShock/blob/general-devel/README_cn.md">中文版</a>
 </p>
 
-TShock is a toolbox for Terraria servers and communities. That toolbox is jam packed with anti-cheat tools, server-side characters, groups, permissions, item bans, tons of commands, and limitless potential. It's one of a kind.
+# Ref-Tile-TShock
 
-This is the readme for TShock developers and hackers. We're building out new [TShock documentation](https://ikebukuro.tshock.co/) for server operators and plugin developers, but this is a work-in-progress right now.
+**Ref-Tile-TShock is a fork of [TShock](https://github.com/Pryaxis/TShock)** built on the Ref-Tile ecosystem: it uses [OTAPI.RefTile](https://www.nuget.org/packages/OTAPI.RefTile) and [Ref-Tile-TSAPI](https://github.com/UnrealMultiple/Ref-Tile-TSAPI) as its foundation, keeps all of TShock's features (anti-cheat, server-side characters, groups, permissions, item bans, tons of commands…), and dramatically reduces memory usage thanks to the **Ref Struct Tile** mode.
 
-## Developing TShock
+## Key advantages
 
-If you want to contribute to TShock by sending a pull request or customize it to suit your own sparkly desires, this is the best starting point. By the end of this, you'll be able to build TShock from source, start to finish. More than that, though, you'll know how to start on the path of becoming an expert TShock developer.
+### 🚀 Ref Struct Tile: dramatically lower memory
 
-This guide works assuming that you have the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed and that you're familiar with the command line. If that doesn't describe you, you should be able to accomplish the same thing using Visual Studio 2022 or Visual Studio Code.
+Vanilla Terraria stores every tile as a **heap-allocated reference class**; the Ref Struct Tile mode used here rewrites it as a **16-byte value-type struct** `Terraria.TileData` stored in contiguous memory:
 
-1. Clone the repository: `git clone https://github.com/Pryaxis/TShock.git --recurse-submodules`
-1. `cd TShock` to enter the repo.
-1. `dotnet build`. No really, that will build things!
+| | Vanilla / traditional OTAPI | Ref-Tile (this project) |
+|---|---|---|
+| Tile representation | `Terraria.Tile` (reference class, one heap object per tile) | `Terraria.TileData` (16-byte struct, inline storage) |
+| World storage | `Tile[,]` — array of object references | `TileCollection` — contiguous `TileData` storage |
+| Tile access | `Main.tile[x, y]` returns a heap object reference | returns `ref TileData` (a managed pointer into the storage) |
 
-If you want to run the `TShockLauncher` (which runs a server), run:
+- **Hundreds of MB saved on large worlds**: for a world around 8400 × 2400 (~20 million tiles), storage drops from **over 1 GB of scattered heap objects to roughly 320 MB of contiguous struct data**.
+- **Per-tile GC pressure is gone**: no more one GC-tracked heap object per tile, so world generation, chunk streaming, and in-game edits stop producing massive amounts of garbage.
+- **Cache-friendly**: contiguous memory turns tile traversal into sequential reads, benefiting lighting, liquid simulation, and map rendering.
+- **Zero-copy in-place edits**: `Main.tile[x, y].type = …` writes straight into the storage slot; hot paths should use `ref TileData tile = ref Main.tile[x, y];`.
 
-1. `dotnet run --project TShockLauncher`
+> Full technical details: [Ref Struct Tile documentation](https://github.com/UnrealMultiple/Ref-Tile-Open-Terraria-API/blob/upcoming/docs/ref-struct-tile.zh-CN.md).
 
-To produce a packaged release (suitable for distribution), run:
+### ⚙️ All of TShock's features
 
-1. `cd TShockLauncher`
-1. `dotnet publish -r win-x64 -f net9.0 -c Release -p:PublishSingleFile=true --self-contained false`
+Anti-cheat, server-side characters, groups & permissions, item bans, the command system… everything is identical to upstream TShock, and the plugin API stays compatible — existing TShock plugins build and run as-is.
 
-Note that in this example, you'd be building for `win-x64`. You can build for `win-x64`, `osx-x64`, `linux-x64`, `linux-arm64`, `linux-arm`. Your release will be in the `TShockLauncher/bin/Release/net9.0/` folder under the architecture you specified.
+### 📦 NuGet package
 
-### Working with Terraria
+- [`Ref-Tile-TShock`](https://www.nuget.org/packages/Ref-Tile-TShock) — the TShock API package on nuget.org
+- Published automatically via **NuGet trusted publishing** (OIDC, no long-lived API keys)
 
-Working with Terraria in TShock and in other Terraria Server API plugins is different from most other APIs. Due to the nature of how OTAPI works, you have direct access to all public fields in the `Terraria` namespace. This means that you can access Terraria member methods directly. TShock and other plugins do this quite often, mostly to modify the game world, send data, and receive data. Calls to `Main` are one such example of direct access to Terraria. This is the equivalent to `net.minecraft.server` (NMS) calls in CraftBukkit.
+### 🌍 Multi-platform
 
-You might find yourself wondering where these fields are. Pryaxis provides the decompiled [Sources](https://github.com/pryaxis/Sources) to Terraria's server, updated with each release. These sources are made available to developers of TShock. If you have submitted a pull request to TShock, reach out on Discord to get access. In lieu of this, you can download `ILSpy` and decompile Terraria or the server itself.
+`win-x64`, `osx-x64`, `linux-x64`, `linux-arm64`, `linux-arm`, publishable as single-file executables.
 
-Finally, you may be interested in developing other Terraria Server API plugins. The [TShockResources](https://github.com/TShockResources) organization has several plugins you can look at and build on. TShock is itself a plugin, and most plugins are open source. This gives you ample room to figure out where to go next.
+## Building from source
 
-Need help? Join us on [Discord](https://discord.gg/Cav9nYX).
+Requires the [.NET 9 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
 
-## Code of Conduct
+```bash
+git clone https://github.com/UnrealMultiple/Ref-Tile-TShock.git --recurse-submodules
+cd Ref-Tile-TShock
+dotnet build
+```
 
-> By participating in the TShock for Terraria community, all members will adhere to maintaining decorum with respect to all humans, in and out of the community. Members will not engage in discussion that inappropriately disparages or marginalizes any group of people or any individual. Members will not attempt to further or advance an agenda to the point of being overbearing or close minded (such as through spreading FUD). Members will not abuse services provided to them and will follow the guidance of community leaders on a situational basis about what abuse consists of. Members will adhere to United States and international law. If members notice a violation of this code of conduct, they will not engage but will instead contact the leadership team on either the forums or Discord.
+Run the server (TShockLauncher):
 
-> Do not attempt to circumvent or bypass the code of conduct by using clever logic or reasoning (e.g., insulting Facepunch members, because they weren't directly mentioned here).
+```bash
+dotnet run --project TShockLauncher
+```
+
+Produce a packaged release:
+
+```bash
+cd TShockLauncher
+dotnet publish -r win-x64 -f net9.0 -c Release -p:PublishSingleFile=true --self-contained false
+```
+
+The output lands in `TShockLauncher/bin/Release/net9.0/<arch>/`.
+
+## Plugin development
+
+Same as upstream TShock: because of OTAPI, every field in the `Terraria` namespace is public, so plugins can touch the game directly (the equivalent of CraftBukkit's NMS).
+
+Note that this project runs the **Ref Struct Tile** mode, so:
+
+- Tiles are the value type `Terraria.TileData` (no longer the reference class `Terraria.Tile`)
+- Hot paths should hold a local reference: `ref TileData tile = ref Main.tile[x, y];`
+- Null checks become `tile.IsNull` / `tile.IsNotNull` (structs can't be null)
+- To keep a tile reference beyond the current scope (fields, collections, closures, async), wrap it in `RefTileData`
+
+## License
+
+[GPL-3.0-or-later](https://www.gnu.org/licenses/gpl-3.0.html) (same as upstream TShock).
