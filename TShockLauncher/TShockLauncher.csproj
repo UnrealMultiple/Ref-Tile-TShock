@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -14,7 +14,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\TerrariaServerAPI\TerrariaServerAPI\TerrariaServerAPI.csproj" ExcludeFromSingleFile="true" />
 		<ProjectReference Include="..\TShockAPI\TShockAPI.csproj" ExcludeFromSingleFile="true" ReferenceOutputAssembly="false" /> <!-- allow api to rebuilt with this project, so ServerPlugins are refreshed -->
-		<ProjectReference Include="..\TShockPluginManager\TShockPluginManager.csproj"/>
+		<ProjectReference Include="..\TShockPluginManager\TShockPluginManager.csproj" />
 		<Reference Include="HttpServer" ExcludeFromSingleFile="true">
 			<HintPath>..\prebuilts\HttpServer.dll</HintPath>
 		</Reference>
@@ -36,14 +36,14 @@
         
 		<PackageReference Include="ModFramework" Version="1.1.15" GeneratePathProperty="true" /> <!-- only used to extract out to ./bin. -->
 		<PackageReference Include="GetText.NET" Version="8.0.5" /> <!-- only used to extract out to ./bin. -->
+		<PackageReference Include="OTAPI.RefTile" Version="3.3.14" ExcludeAssets="all" GeneratePathProperty="true" />
 
 		<!-- the launcher doesnt need the direct OTAPI reference, but since PackageReference[ExcludeFromSingleFile] doesnt work, exclude the assets and copy manually -->
-		<PackageReference Include="OTAPI.Upcoming" Version="3.3.14" ExcludeAssets="all" GeneratePathProperty="true" />
-		<None Include="$(PkgOTAPI_Upcoming)\lib\net9.0\OTAPI.dll">
+		<None Include="$(PkgOTAPI_RefTile)\lib\net9.0\OTAPI.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		</None>
-		<None Include="$(PkgOTAPI_Upcoming)\lib\net9.0\OTAPI.Runtime.dll">
+		<None Include="$(PkgOTAPI_RefTile)\lib\net9.0\OTAPI.Runtime.dll">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
 		</None>
@@ -54,27 +54,22 @@
 	</ItemGroup>
 
 	<Target Name="CheckMsgfmtCallable">
-		<Exec Command="msgfmt --help > NUL" IgnoreExitCode="True" Condition=" '$(OS)' == 'Windows_NT' ">
+		<Exec Command="msgfmt --help &gt; NUL" IgnoreExitCode="True" Condition=" '$(OS)' == 'Windows_NT' ">
 			<Output TaskParameter="ExitCode" PropertyName="MsgfmtExitCode" />
 		</Exec>
-		<Exec Command="msgfmt --help 2>/dev/null >/dev/null" IgnoreExitCode="True" Condition=" '$(OS)' != 'Windows_NT' ">
+		<Exec Command="msgfmt --help 2&gt;/dev/null &gt;/dev/null" IgnoreExitCode="True" Condition=" '$(OS)' != 'Windows_NT' ">
 			<Output TaskParameter="ExitCode" PropertyName="MsgfmtExitCode" />
 		</Exec>
 	</Target>
 
 	<!-- The condition for a Target can't come from the values of another target, so instead we have to put the same condition on all three of the items inside. -->
-	<Target
-		Name="GenerateMOFiles"
-		DependsOnTargets="CheckMsgfmtCallable"
-		AfterTargets="PostBuildEvent;Publish"
-		Inputs="..\i18n\**\*.po"
-		Outputs="$(OutDir)i18n\**\*.mo">
+	<Target Name="GenerateMOFiles" DependsOnTargets="CheckMsgfmtCallable" AfterTargets="PostBuildEvent;Publish" Inputs="..\i18n\**\*.po" Outputs="$(OutDir)i18n\**\*.mo">
 		<ItemGroup Condition="'$(MsgfmtExitCode)' == '0'">
 			<POFiles Include="..\i18n\**\*.po" />
 		</ItemGroup>
 		<MakeDir Directories="$(OutDir)i18n/%(POFiles.RecursiveDir)" Condition="'$(MsgfmtExitCode)' == '0'" />
 		<Exec Command="msgfmt -o $(OutDir)i18n/%(RecursiveDir)%(Filename).mo @(POFiles)" Outputs="$(OutDir)i18n\**\*.mo" Condition="'$(MsgfmtExitCode)' == '0'">
-			<Output ItemName="Generated" TaskParameter="Outputs"/>
+			<Output ItemName="Generated" TaskParameter="Outputs" />
 		</Exec>
 	</Target>
 
@@ -89,7 +84,7 @@
 	</Target>
 	<Target Name="CopyI18n" AfterTargets="Publish">
 		<ItemGroup>
-			<MOFiles Include="$(OutDir)**/*.mo"/>
+			<MOFiles Include="$(OutDir)**/*.mo" />
 		</ItemGroup>
 		<Copy SourceFiles="@(MOFiles)" DestinationFolder="$(PublishDir)%(RecursiveDir)" />
 	</Target>

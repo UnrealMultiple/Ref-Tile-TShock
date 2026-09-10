@@ -180,10 +180,10 @@ namespace TShockAPI
 			NetMessage.SendData((int)PacketTypes.NpcStrike, -1, -1, NetworkText.Empty, npcid, damage, knockBack, hitDirection);
 		}
 
-		public void RevertTiles(Dictionary<Vector2, ITile> tiles)
+		public void RevertTiles(Dictionary<Vector2, TileData> tiles)
 		{
 			// Update Main.Tile first so that when tile square is sent it is correct
-			foreach (KeyValuePair<Vector2, ITile> entry in tiles)
+			foreach (KeyValuePair<Vector2, TileData> entry in tiles)
 			{
 				Main.tile[(int)entry.Key.X, (int)entry.Key.Y] = entry.Value;
 			}

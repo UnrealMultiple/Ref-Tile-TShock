@@ -231,12 +231,12 @@ namespace TShockAPI
 		/// <summary>
 		/// A queue of tiles destroyed by the player for reverting.
 		/// </summary>
-		public Dictionary<Vector2, ITile> TilesDestroyed { get; protected set; }
+		public Dictionary<Vector2, TileData> TilesDestroyed { get; protected set; }
 
 		/// <summary>
 		/// A queue of tiles placed by the player for reverting.
 		/// </summary>
-		public Dictionary<Vector2, ITile> TilesCreated { get; protected set; }
+		public Dictionary<Vector2, TileData> TilesCreated { get; protected set; }
 
 		/// <summary>
 		/// The player's group.
@@ -1525,8 +1525,8 @@ namespace TShockAPI
 		/// <param name="index">The player's index in the.</param>
 		public TSPlayer(int index)
 		{
-			TilesDestroyed = new Dictionary<Vector2, ITile>();
-			TilesCreated = new Dictionary<Vector2, ITile>();
+			TilesDestroyed = new Dictionary<Vector2, TileData>();
+			TilesCreated = new Dictionary<Vector2, TileData>();
 			Index = index;
 			Group = Group.DefaultGroup;
 			IceTiles = new List<Point>();
@@ -1539,8 +1539,8 @@ namespace TShockAPI
 		/// <param name="playerName">The player's name.</param>
 		protected TSPlayer(String playerName)
 		{
-			TilesDestroyed = new Dictionary<Vector2, ITile>();
-			TilesCreated = new Dictionary<Vector2, ITile>();
+			TilesDestroyed = new Dictionary<Vector2, TileData>();
+			TilesCreated = new Dictionary<Vector2, TileData>();
 			Index = -1;
 			FakePlayer = new Player { name = playerName, whoAmI = -1 };
 			Group = Group.DefaultGroup;

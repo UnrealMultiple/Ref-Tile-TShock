@@ -5113,7 +5113,7 @@ namespace TShockAPI
 									// Could be improved by sending raw tile data to the client instead but not really
 									// worth the effort as chances are very low that overwriting the wire for a few
 									// nanoseconds will cause much trouble.
-									ITile tile = Main.tile[boundaryPoint.X, boundaryPoint.Y];
+									ref TileData tile = ref Main.tile[boundaryPoint.X, boundaryPoint.Y];
 									bool oldWireState = tile.wire();
 									tile.wire(true);
 

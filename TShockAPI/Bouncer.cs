@@ -626,7 +626,7 @@ namespace TShockAPI
 			int tileY = args.Y;
 			short editData = args.EditData;
 			EditType type = args.editDetail;
-			ITile tile = Main.tile[tileX, tileY];
+			ref TileData tile = ref Main.tile[tileX, tileY];
 
 			// 'placeStyle' is a term used in Terraria land to determine which frame of a sprite is displayed when the sprite is placed. The placeStyle
 			// determines the frameX and frameY offsets
@@ -1152,7 +1152,7 @@ namespace TShockAPI
 					return;
 				}
 
-				ITile above = Main.tile[tileX, tileY - 1];
+				ref TileData above = ref Main.tile[tileX, tileY - 1];
 				if (above.type < TileObjectData._data.Count && TileObjectData._data[above.type] != null)
 				{
 					TileObjectData data = TileObjectData._data[above.type];
@@ -1173,7 +1173,7 @@ namespace TShockAPI
 					return;
 				}
 
-				ITile below = Main.tile[tileX, tileY + 1];
+				ref TileData below = ref Main.tile[tileX, tileY + 1];
 				if (below.type < TileObjectData._data.Count && TileObjectData._data[below.type] != null)
 				{
 					TileObjectData data = TileObjectData._data[below.type];

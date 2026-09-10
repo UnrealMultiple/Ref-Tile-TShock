@@ -622,7 +622,7 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			ref TileData oldTile = ref Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
 			WorldGenMock.SimulateConversionChange(rect.X, rect.Y, out HashSet<ushort> validTiles, out HashSet<ushort> validWalls);
@@ -737,7 +737,7 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			ref TileData oldTile = ref Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
 			if (
@@ -789,7 +789,7 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			ref TileData oldTile = ref Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
 			if (GrassToMowedMap.TryGetValue(oldTile.type, out ushort mowed) && newTile.Type == mowed)
@@ -840,7 +840,7 @@ namespace TShockAPI.Handlers
 				return false;
 			}
 
-			ITile oldTile = Main.tile[rect.X, rect.Y];
+			ref TileData oldTile = ref Main.tile[rect.X, rect.Y];
 			NetTile newTile = rect[0, 0];
 
 			if (oldTile.type == TileID.ChristmasTree && newTile.Type == TileID.ChristmasTree)
