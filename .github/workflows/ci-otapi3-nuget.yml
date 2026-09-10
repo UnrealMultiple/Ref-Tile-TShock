@@ -33,5 +33,9 @@ jobs:
       with:
         user: ${{ secrets.NUGET_USER }} # nuget.org 用户名（个人资料名，如 Controllerdestiny）
 
+    # 先推 TSAPI（Ref.Tile.TSAPI），再推 TShockAPI（Ref.Tile.TShock 依赖它）
+    - name: Push Ref-Tile-TSAPI
+      run: dotnet nuget push TerrariaServerAPI/TerrariaServerAPI/bin/Release/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+
     - name: Push Ref-Tile-TShock
       run: dotnet nuget push TShockAPI/bin/Release/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
