@@ -1,0 +1,112 @@
+name: Release (GitHub Release)
+
+# 发布 GitHub Release：
+# 1) 推送 v* 标签时自动触发（例如 v6.2.0），同时 ci-docker.yml 会把镜像推到 ghcr.io；
+# 2) 也可手动触发（workflow_dispatch），必须填写 tag 名称。
+#
+# 注意：NuGet 发布不在这里 —— 它由 ci-otapi3-nuget.yml 在推送 nuget-release 分支时处理。
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release 标签名称，例如 v6.2.0。若该标签不存在，会基于触发本次运行的提交创建。'
+        required: true
+      draft:
+        description: '创建为草稿（Draft），稍后在网页上手动发布'
+        type: boolean
+        default: false
+      prerelease:
+        description: '标记为预发布（Pre-release）'
+        type: boolean
+        default: false
+
+jobs:
+  # 构建 5 个平台的安装包，打成发布归档
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["win-x64", "osx-x64", "linux-x64", "linux-arm64", "linux-arm"]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Install msgfmt and zip
+        run: sudo apt-get install -y gettext zip
+
+      - name: Produce installer
+        run: |
+          cd TShockInstaller
+          dotnet publish -r ${{ matrix.arch }} -f net9.0 -c Release -p:PublishSingleFile=true --self-contained
+
+      - name: Produce build
+        run: |
+          cd TShockLauncher
+          dotnet publish -r ${{ matrix.arch }} -f net9.0 -c Release -p:PublishSingleFile=true --no-self-contained
+
+      - name: Chmod scripts (non-Windows)
+        if: ${{ matrix.arch != 'win-x64' }}
+        run: |
+          chmod +x TShockLauncher/bin/Release/net9.0/${{ matrix.arch }}/publish/TShock.Server
+
+      - name: Copy installer
+        run: |
+          cp TShockInstaller/bin/Release/net9.0/${{ matrix.arch }}/publish/* TShockLauncher/bin/Release/net9.0/${{ matrix.arch }}/publish/
+
+      # 归档到 <arch> 目录下，文件名区分平台：Windows 用 zip，其余用 tar.gz（保留可执行权限）
+      - name: Package archive (non-Windows)
+        if: ${{ matrix.arch != 'win-x64' }}
+        run: |
+          cd TShockLauncher/bin/Release/net9.0/${{ matrix.arch }}/publish/
+          tar -czf ../TShock-${{ matrix.arch }}-Release.tar.gz *
+
+      - name: Package archive (Windows)
+        if: ${{ matrix.arch == 'win-x64' }}
+        run: |
+          cd TShockLauncher/bin/Release/net9.0/${{ matrix.arch }}/publish/
+          zip -r ../TShock-${{ matrix.arch }}-Release.zip *
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TShock-${{ matrix.arch }}-Release
+          path: TShockLauncher/bin/Release/net9.0/${{ matrix.arch }}/TShock-${{ matrix.arch }}-Release.${{ matrix.arch == 'win-x64' && 'zip' || 'tar.gz' }}
+          if-no-files-found: error
+
+  # 汇总所有平台归档，创建 GitHub Release
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必需：创建 Release 及上传资产
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: artifacts/*
+          generate_release_notes: true
+          draft: ${{ inputs.draft || false }}
+          prerelease: ${{ inputs.prerelease || contains(inputs.tag || github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
